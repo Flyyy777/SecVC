@@ -1,4 +1,4 @@
-from mitygacja import apply_set_expansion
+from mitigations import apply_set_expansion
 from PIL import Image
 import numpy as np
 import itertools
