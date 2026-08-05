@@ -5,35 +5,35 @@ import os
 
 # ======================================================================================================================================================== #
 # Function returning sets of single-column matrices for two colors, where:
-# S0 - basis matrix for the white pixel
-# S1 - basis matrix for the black pixel
-def split_into_columns(S0, S1):
-    C0 = [S0[:, [i]] for i in range(S0.shape[1])]
-    C1 = [S1[:, [i]] for i in range(S1.shape[1])]
+# B0 - basis matrix for the white pixel
+# B1 - basis matrix for the black pixel
+def split_into_columns(B0, B1):
+    C0 = [B0[:, [i]] for i in range(B0.shape[1])]
+    C1 = [B1[:, [i]] for i in range(B1.shape[1])]
     return C0, C1
 # ======================================================================================================================================================== #
 
 
 # ======================================================================================================================================================== #
 # Function returning an encrypted image using Visual Cryptography, where:
-# S0 - basis matrix for the white pixel
-# S1 - basis matrix for the black pixel
+# B0 - basis matrix for the white pixel
+# B1 - basis matrix for the black pixel
 # image_path - path to the input image
 # seed - random value used as the RNG seed
 # output_dir - directory where the generated shares will be saved
 # probabilistic - deterministic mode (False) or probabilistic mode (True)
-def encrypt(S0, S1, image_path, seed, output_dir, probabilistic=False):
+def encrypt(B0, B1, image_path, seed, output_dir, probabilistic=False):
 
     image = Image.open(image_path).convert('L')
     image_array = np.array(image)
     binary_image = np.where(image_array == 0, 1, 0).astype(np.uint8)
 
     if not probabilistic:
-        permutations = list(itertools.permutations(range(S0.shape[1])))
-        C0 = [S0[:, p] for p in permutations]
-        C1 = [S1[:, p] for p in permutations]
+        permutations = list(itertools.permutations(range(B0.shape[1])))
+        C0 = [B0[:, p] for p in permutations]
+        C1 = [B1[:, p] for p in permutations]
     else:
-        C0, C1 = split_into_columns(S0, S1)
+        C0, C1 = split_into_columns(B0, B1)
 
     num_matrices = len(C0)
 
