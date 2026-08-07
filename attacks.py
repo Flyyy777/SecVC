@@ -174,74 +174,68 @@ def create_forged_share(share_path, output_path, m, fake_image_path):
 
     fake_image = Image.open(fake_image_path).convert("L")
     fake_array = np.array(fake_image)
-    binary_fake = np.where(fake_array < 128, 1, 0).astype(np.uint8)
 
-    share = Image.open(share_path).convert('L')
+    FO = np.where(fake_array < 128, 1, 0).astype(np.uint8)
+
+    share = Image.open(share_path).convert("L")
     share_array = np.array(share)
+
     S = np.where(share_array < 128, 1, 0).astype(np.uint8)
 
-    Hm, W = S.shape
-    if Hm % m != 0:
-        raise ValueError(f"Share height ({Hm}) is not divisible by m={m}.")
-    H = Hm // m
+    subpixel_height, width = S.shape
 
-    if (H, W) != binary_fake.shape:
+    if subpixel_height % m != 0:
         raise ValueError(
-            f"Fake image has shape {binary_fake.shape}, "
-            f"but share implies {H}×{W}. They must match."
+            f"Share height {subpixel_height} is not divisible by m={m}"
         )
 
-    ones_per_block = []
-    for y in range(H):
-        for x in range(W):
-            block = S[y * m:(y + 1) * m, x]
-            ones_per_block.append(int(np.sum(block)))
+    height = subpixel_height // m
 
-    typical = int(np.round(np.median(ones_per_block)))
-    typical = min(max(typical, 0), m)
+    if FO.shape != (height, width):
+        raise ValueError(
+            f"FO has size {FO.shape}, "
+            f"while share corresponds to {height}x{width}"
+        )
 
     forged_share = np.zeros_like(S, dtype=np.uint8)
 
-    for y in range(H):
-        for x in range(W):
-            block = S[y * m:(y + 1) * m, x].copy()
-            target = int(binary_fake[y, x])
+    for y in range(height):
+        for x in range(width):
 
-            if target == 0:
-                forged_block = block.copy()
+            block = S[y*m:(y+1)*m, x]
+
+            black_count = int(np.sum(block))
+
+            if FO[y, x] == 0:
+                forged_share[y*m:(y+1)*m, x] = block
+
             else:
-                zero_positions = np.where(block == 0)[0].tolist()
-                min_required = len(zero_positions)
+                new_block = np.zeros(m, dtype=np.uint8)
 
-                target_ones = max(typical, min_required)
+                positions = random.sample(
+                    range(m),
+                    black_count
+                )
 
-                forged_block = np.zeros(m, dtype=np.uint8)
+                for position in positions:
+                    new_block[position] = 1
 
-                for k in zero_positions:
-                    forged_block[k] = 1
-
-                current_ones = int(np.sum(forged_block))
-                to_add = target_ones - current_ones
-
-                if to_add > 0:
-                    candidates = np.where(block == 1)[0].tolist()
-
-                    if len(candidates) < to_add:
-                        candidates = [i for i in range(m) if forged_block[i] == 0]
-
-                    selected = random.sample(candidates, to_add)
-                    for k in selected:
-                        forged_block[k] = 1
-
-            forged_share[y * m:(y + 1) * m, x] = forged_block
+                forged_share[y*m:(y+1)*m, x] = new_block
 
     output_array = ((1 - forged_share) * 255).astype(np.uint8)
-    output_image = Image.fromarray(output_array).convert('L')
 
-    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    output_image = Image.fromarray(output_array).convert("L")
+
+    os.makedirs(
+        os.path.dirname(output_path) or ".",
+        exist_ok=True
+    )
+
     output_image.save(output_path)
 
-    print(f"Forged share saved to: {output_path}")
+    print(
+        f"Forged share saved: {output_path}"
+    )
 
     return forged_share
 # ======================================================================================================================================================== #
